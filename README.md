@@ -31,6 +31,8 @@ A PostgreSQL cluster setup with master-replica replication, PgPool-II load balan
 
 ## Quick Start
 
+> **💡 Using PgPool Admin Only?** See [Standalone Admin Guide](docs/STANDALONE_ADMIN.md) for monitoring your existing PostgreSQL/PgPool infrastructure.
+
 ### Prerequisites
 
 - Docker and Docker Compose v2.0+
