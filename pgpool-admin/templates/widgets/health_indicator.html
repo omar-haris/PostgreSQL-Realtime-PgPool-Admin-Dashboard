@@ -1,0 +1,45 @@
+<div class="health-indicator" id="healthIndicator">
+    <span class="status-indicator" id="healthStatus"></span>
+    <span id="healthText">Checking...</span>
+</div>
+
+<script>
+function updateHealthIndicator() {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            const healthIndicator = document.getElementById('healthIndicator');
+            const healthStatus = document.getElementById('healthStatus');
+            const healthText = document.getElementById('healthText');
+            
+            let health = 'healthy';
+            let text = 'System Healthy';
+            
+            // Check various health metrics
+            if (data.error || !data.pool_nodes) {
+                health = 'unhealthy';
+                text = 'System Unhealthy';
+            } else if (data.pool_nodes.some(node => node.status !== 2)) {
+                health = 'degraded';
+                text = 'System Degraded';
+            }
+            
+            healthIndicator.className = 'health-indicator health-' + health;
+            healthStatus.className = 'status-indicator status-' + (health === 'healthy' ? 'up' : health === 'degraded' ? 'warning' : 'down');
+            healthText.textContent = text;
+        })
+        .catch(error => {
+            const healthIndicator = document.getElementById('healthIndicator');
+            const healthStatus = document.getElementById('healthStatus');
+            const healthText = document.getElementById('healthText');
+            
+            healthIndicator.className = 'health-indicator health-unhealthy';
+            healthStatus.className = 'status-indicator status-down';
+            healthText.textContent = 'Connection Error';
+        });
+}
+
+// Update health indicator every 5 seconds
+updateHealthIndicator();
+setInterval(updateHealthIndicator, 5000);
+</script>

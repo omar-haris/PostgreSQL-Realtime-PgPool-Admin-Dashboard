@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Insights - PgPool Admin{% endblock %}
+{% block page_title %}Performance Insights{% endblock %}
+
+{% block content %}
+<!-- Insights Summary -->
+<div class="dashboard-grid">
+    <div class="card glass-card">
+        <div class="card-header">
+            <h3 class="card-title">Health Score</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="healthScore">-</div>
+            <div class="metric-label">Overall system health</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="healthProgress" style="width: 0%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card glass-card">
+        <div class="card-header">
+            <h3 class="card-title">Optimization Score</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="optimizationScore">-</div>
+            <div class="metric-label">Query optimization potential</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="optimizationProgress" style="width: 0%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card glass-card">
+        <div class="card-header">
+            <h3 class="card-title">Issues Detected</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="issuesCount">-</div>
+            <div class="metric-label">Requiring attention</div>
+        </div>
+    </div>
+
+    <div class="card glass-card">
+        <div class="card-header">
+            <h3 class="card-title">Recommendations</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="recommendationsCount">-</div>
+            <div class="metric-label">Available improvements</div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Issues -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Performance Issues</h3>
+    </div>
+    <div class="card-content">
+        <div id="performanceIssues" class="issues-list">
+            <div class="loading">Analyzing performance...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Query Optimization Opportunities -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Query Optimization Opportunities</h3>
+    </div>
+    <div class="card-content">
+        <table id="optimizationTable">
+            <thead>
+                <tr>
+                    <th>Query Pattern</th>
+                    <th>Impact</th>
+                    <th>Potential Savings</th>
+                    <th>Recommendation</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="5" style="text-align: center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Resource Usage Trends -->
+<div class="charts-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Resource Usage Trends</h3>
+        </div>
+        <div class="card-content">
+            <div class="chart-container">
+                <canvas id="resourceTrendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Performance Score History</h3>
+        </div>
+        <div class="card-content">
+            <div class="chart-container">
+                <canvas id="performanceScoreChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Recommended Actions</h3>
+    </div>
+    <div class="card-content">
+        <div id="recommendations" class="recommendations-list">
+            <div class="loading">Generating recommendations...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .issues-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .issue-item {
+        background: #0f172a;
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid #ef4444;
+    }
+
+    .issue-item.warning {
+        border-left-color: #f59e0b;
+    }
+
+    .issue-item.info {
+        border-left-color: #3b82f6;
+    }
+
+    .issue-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #f1f5f9;
+    }
+
+    .issue-description {
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+
+    .recommendations-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .recommendation-item {
+        background: #0f172a;
+        padding: 20px;
+        border-radius: 8px;
+        display: flex;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .recommendation-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+
+    .recommendation-content {
+        flex: 1;
+    }
+
+    .recommendation-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #f1f5f9;
+    }
+
+    .recommendation-description {
+        color: #94a3b8;
+        margin-bottom: 12px;
+    }
+
+    .recommendation-action {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #3b82f6;
+        color: white;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: background 0.2s;
+    }
+
+    .recommendation-action:hover {
+        background: #2563eb;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/insights.js') }}"></script>
+{% endblock %}

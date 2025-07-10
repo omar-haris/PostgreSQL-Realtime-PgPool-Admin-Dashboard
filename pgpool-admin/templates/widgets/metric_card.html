@@ -1,0 +1,17 @@
+{# Metric Card Widget #}
+{# Usage: {% include 'widgets/metric_card.html' with title='Total Connections', value_id='totalConnections', label='Active database connections' %} #}
+
+<div class="card metric-card">
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+    </div>
+    <div class="card-content">
+        <div class="metric-value" id="{{ value_id }}">-</div>
+        <div class="metric-label">{{ label }}</div>
+        {% if show_progress %}
+        <div class="progress-bar">
+            <div class="progress-fill" id="{{ value_id }}Progress" style="width: 0%; background: {{ progress_color|default('#3b82f6') }};"></div>
+        </div>
+        {% endif %}
+    </div>
+</div>

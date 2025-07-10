@@ -1,0 +1,1049 @@
+{% extends "base.html" %}
+
+{% block title %}Overview - PgPool Admin{% endblock %}
+{% block page_title %}Infrastructure Overview{% endblock %}
+
+{% block content %}
+<div class="overview-container">
+    <!-- Executive Summary Header -->
+    <div class="executive-summary">
+        <div class="summary-content">
+            <div class="summary-left">
+                <h2 class="summary-title">
+                    <a href="https://openseawave.com" target="_blank" rel="noopener noreferrer">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="OPENSEWAVE" class="summary-logo">
+                    </a>
+                    Database Infrastructure Health
+                </h2>
+                <p class="summary-subtitle">Real-time monitoring and analytics for your PostgreSQL cluster</p>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <span class="stat-icon">⏱️</span>
+                        <span class="stat-text">Uptime: <strong id="clusterUptime">99.9%</strong></span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-icon">📊</span>
+                        <span class="stat-text">Total Queries Today: <strong id="totalQueriesToday">0</strong></span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-icon">⚡</span>
+                        <span class="stat-text">Avg Response Time: <strong id="avgResponseTime">0ms</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-right">
+                <div class="health-score-container">
+                    <div class="health-score" id="healthScore">
+                        <div class="score-circle">
+                            <svg width="160" height="160">
+                                <circle cx="80" cy="80" r="70" class="score-bg"></circle>
+                                <circle cx="80" cy="80" r="70" class="score-fill" id="scoreCircle"></circle>
+                            </svg>
+                            <div class="score-text">
+                                <span class="score-value" id="scoreValue">98</span>
+                                <span class="score-label">Health Score</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Metrics Dashboard -->
+    <div class="critical-metrics">
+        <div class="metric-card-enhanced gradient-blue">
+            <div class="metric-header">
+                <span class="metric-icon">🔗</span>
+                <span class="metric-title">Connection Pool</span>
+            </div>
+            <div class="metric-body">
+                <div class="metric-main">
+                    <span class="metric-value" id="activeConnections">0</span>
+                    <span class="metric-unit">/ <span id="maxConnections">100</span></span>
+                </div>
+                <div class="metric-progress">
+                    <div class="progress-bar" id="connectionProgress"></div>
+                </div>
+                <div class="metric-footer">
+                    <span class="metric-trend up">↑ 12%</span>
+                    <span class="metric-label">Active Connections</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card-enhanced gradient-green">
+            <div class="metric-header">
+                <span class="metric-icon">⚡</span>
+                <span class="metric-title">Query Performance</span>
+            </div>
+            <div class="metric-body">
+                <div class="metric-main">
+                    <span class="metric-value" id="queriesPerSec">0</span>
+                    <span class="metric-unit">QPS</span>
+                </div>
+                <div class="metric-sparkline" id="qpsSparkline"></div>
+                <div class="metric-footer">
+                    <span class="metric-trend up">↑ 8%</span>
+                    <span class="metric-label">Queries per Second</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card-enhanced gradient-purple">
+            <div class="metric-header">
+                <span class="metric-icon">💾</span>
+                <span class="metric-title">Cache Performance</span>
+            </div>
+            <div class="metric-body">
+                <div class="metric-main">
+                    <span class="metric-value" id="cacheHitRate">0</span>
+                    <span class="metric-unit">%</span>
+                </div>
+                <div class="metric-gauge">
+                    <div class="gauge-fill" id="cacheGauge"></div>
+                </div>
+                <div class="metric-footer">
+                    <span class="metric-trend up">↑ 2.5%</span>
+                    <span class="metric-label">Hit Rate</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card-enhanced gradient-orange">
+            <div class="metric-header">
+                <span class="metric-icon">🔄</span>
+                <span class="metric-title">Replication Status</span>
+            </div>
+            <div class="metric-body">
+                <div class="metric-main">
+                    <span class="metric-value" id="replicationLag">0</span>
+                    <span class="metric-unit">ms</span>
+                </div>
+                <div class="replication-status">
+                    <div class="status-indicator green"></div>
+                    <span class="status-text">Synchronized</span>
+                </div>
+                <div class="metric-footer">
+                    <span class="metric-trend stable">→ 0%</span>
+                    <span class="metric-label">Replication Lag</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Infrastructure Overview Grid -->
+    <div class="infrastructure-grid">
+        <!-- Cluster Topology -->
+        <div class="card enterprise-card">
+            <div class="card-header">
+                <h3 class="card-title">🌐 Cluster Topology</h3>
+                <div class="card-actions">
+                    <button class="btn btn-sm" onclick="refreshTopology()">Refresh</button>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="topology-container" id="topologyContainer">
+                    <div class="topology-node pgpool">
+                        <div class="node-icon">🔄</div>
+                        <div class="node-name">PgPool Load Balancer</div>
+                        <div class="node-status online">Online</div>
+                        <div class="node-metrics">
+                            <span>CPU: <strong id="pgpoolCpu">0%</strong></span>
+                            <span>Memory: <strong id="pgpoolMem">0%</strong></span>
+                        </div>
+                    </div>
+                    <div class="topology-connections">
+                        <div class="connection-line active"></div>
+                        <div class="connection-line active"></div>
+                    </div>
+                    <div class="topology-databases">
+                        <div class="topology-node master">
+                            <div class="node-icon">👑</div>
+                            <div class="node-name">Master Database</div>
+                            <div class="node-status online">Primary</div>
+                            <div class="node-metrics">
+                                <span>TPS: <strong id="masterTps">0</strong></span>
+                                <span>Size: <strong id="masterSize">0GB</strong></span>
+                            </div>
+                        </div>
+                        <div class="topology-node replica">
+                            <div class="node-icon">📋</div>
+                            <div class="node-name">Replica Database</div>
+                            <div class="node-status online">Standby</div>
+                            <div class="node-metrics">
+                                <span>Lag: <strong id="replicaLag">0ms</strong></span>
+                                <span>Size: <strong id="replicaSize">0GB</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Activity Monitor -->
+        <div class="card enterprise-card">
+            <div class="card-header">
+                <h3 class="card-title">📊 Real-time Activity</h3>
+                <div class="activity-legend">
+                    <span class="legend-item"><span class="legend-color queries"></span>Queries</span>
+                    <span class="legend-item"><span class="legend-color connections"></span>Connections</span>
+                    <span class="legend-item"><span class="legend-color transactions"></span>Transactions</span>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="activity-heatmap" id="activityHeatmap"></div>
+                <div class="activity-timeline">
+                    <span>60s ago</span>
+                    <span>45s ago</span>
+                    <span>30s ago</span>
+                    <span>15s ago</span>
+                    <span>Now</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Analytics -->
+    <div class="analytics-section">
+        <div class="card enterprise-card">
+            <div class="card-header">
+                <h3 class="card-title">📈 Performance Analytics</h3>
+                <div class="time-selector">
+                    <button class="time-btn active" onclick="changeTimeRange('1h')">1H</button>
+                    <button class="time-btn" onclick="changeTimeRange('6h')">6H</button>
+                    <button class="time-btn" onclick="changeTimeRange('24h')">24H</button>
+                    <button class="time-btn" onclick="changeTimeRange('7d')">7D</button>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="analytics-charts">
+                    <div class="chart-container large">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                    <div class="analytics-sidebar">
+                        <div class="analytics-stat">
+                            <h5>Peak Load Time</h5>
+                            <p class="stat-value">14:30 - 15:45</p>
+                            <p class="stat-detail">1,245 concurrent connections</p>
+                        </div>
+                        <div class="analytics-stat">
+                            <h5>Busiest Database</h5>
+                            <p class="stat-value">app_production</p>
+                            <p class="stat-detail">67% of total queries</p>
+                        </div>
+                        <div class="analytics-stat">
+                            <h5>Avg Query Duration</h5>
+                            <p class="stat-value">45ms</p>
+                            <p class="stat-detail">↓ 12% from yesterday</p>
+                        </div>
+                        <div class="analytics-stat">
+                            <h5>Error Rate</h5>
+                            <p class="stat-value">0.02%</p>
+                            <p class="stat-detail">3 errors in 15,000 queries</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Utilization & Alerts -->
+    <div class="bottom-grid">
+        <!-- Resource Utilization -->
+        <div class="card enterprise-card">
+            <div class="card-header">
+                <h3 class="card-title">💻 Resource Utilization</h3>
+            </div>
+            <div class="card-content">
+                <div class="resource-grid">
+                    <div class="resource-item">
+                        <div class="resource-header">
+                            <span class="resource-name">CPU Usage</span>
+                            <span class="resource-value" id="cpuUsage">0%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <div class="resource-fill cpu" id="cpuBar"></div>
+                        </div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-header">
+                            <span class="resource-name">Memory Usage</span>
+                            <span class="resource-value" id="memUsage">0%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <div class="resource-fill memory" id="memBar"></div>
+                        </div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-header">
+                            <span class="resource-name">Disk I/O</span>
+                            <span class="resource-value" id="diskIO">0 MB/s</span>
+                        </div>
+                        <div class="resource-bar">
+                            <div class="resource-fill disk" id="diskBar"></div>
+                        </div>
+                    </div>
+                    <div class="resource-item">
+                        <div class="resource-header">
+                            <span class="resource-name">Network I/O</span>
+                            <span class="resource-value" id="networkIO">0 MB/s</span>
+                        </div>
+                        <div class="resource-bar">
+                            <div class="resource-fill network" id="networkBar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Alerts -->
+        <div class="card enterprise-card">
+            <div class="card-header">
+                <h3 class="card-title">🚨 Recent Alerts</h3>
+                <span class="alert-count" id="alertCount">0</span>
+            </div>
+            <div class="card-content">
+                <div class="alerts-list" id="alertsList">
+                    <div class="alert-item info">
+                        <div class="alert-icon">ℹ️</div>
+                        <div class="alert-content">
+                            <div class="alert-title">System Maintenance Scheduled</div>
+                            <div class="alert-message">Database backup will run at 2:00 AM</div>
+                            <div class="alert-time">10 minutes ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card enterprise-card">
+            <div class="card-header">
+                <h3 class="card-title">⚡ Quick Actions</h3>
+            </div>
+            <div class="card-content">
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="runHealthCheck()">
+                        <span class="action-icon">🏥</span>
+                        <span class="action-text">Health Check</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="clearCache()">
+                        <span class="action-icon">🧹</span>
+                        <span class="action-text">Clear Cache</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="viewLogs()">
+                        <span class="action-icon">📜</span>
+                        <span class="action-text">View Logs</span>
+                    </button>
+                    <button class="quick-action-btn" onclick="exportReport()">
+                        <span class="action-icon">📊</span>
+                        <span class="action-text">Export Report</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Overview Container */
+.overview-container {
+    padding: 24px;
+}
+
+/* Executive Summary */
+.executive-summary {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 32px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.summary-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 12px 0;
+}
+
+.summary-subtitle {
+    color: #94a3b8;
+    font-size: 1.125rem;
+    margin-bottom: 24px;
+}
+
+.summary-stats {
+    display: flex;
+    gap: 32px;
+}
+
+.summary-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-icon {
+    font-size: 1.25rem;
+}
+
+.stat-text {
+    color: #cbd5e1;
+    font-size: 0.875rem;
+}
+
+.stat-text strong {
+    color: #f1f5f9;
+    font-size: 1rem;
+}
+
+/* Health Score */
+.health-score-container {
+    position: relative;
+}
+
+.health-score {
+    position: relative;
+    width: 160px;
+    height: 160px;
+}
+
+.score-circle {
+    position: relative;
+}
+
+.score-bg {
+    fill: none;
+    stroke: rgba(51, 65, 85, 0.5);
+    stroke-width: 12;
+}
+
+.score-fill {
+    fill: none;
+    stroke: #10b981;
+    stroke-width: 12;
+    stroke-linecap: round;
+    stroke-dasharray: 440;
+    stroke-dashoffset: 44;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    transition: stroke-dashoffset 1s ease;
+}
+
+.score-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.score-value {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.score-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+/* Critical Metrics */
+.critical-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.metric-card-enhanced {
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.metric-card-enhanced:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.gradient-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.gradient-green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.gradient-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.gradient-orange {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.metric-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.metric-icon {
+    font-size: 1.5rem;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.metric-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+}
+
+.metric-unit {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.metric-progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    transition: width 0.5s ease;
+}
+
+.metric-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.metric-trend {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.metric-trend.up {
+    color: #10b981;
+}
+
+.metric-trend.down {
+    color: #ef4444;
+}
+
+.metric-trend.stable {
+    color: #f59e0b;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Infrastructure Grid */
+.infrastructure-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+/* Topology */
+.topology-container {
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 12px;
+    min-height: 300px;
+}
+
+.topology-node {
+    background: rgba(30, 41, 59, 0.8);
+    border: 2px solid rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.topology-node:hover {
+    transform: scale(1.05);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.topology-node.pgpool {
+    border-color: rgba(139, 92, 246, 0.5);
+    margin-bottom: 40px;
+}
+
+.topology-node.master {
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.topology-node.replica {
+    border-color: rgba(16, 185, 129, 0.5);
+}
+
+.node-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.node-name {
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 8px;
+}
+
+.node-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.node-status.online {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.node-metrics {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+.topology-connections {
+    display: flex;
+    justify-content: center;
+    gap: 100px;
+    margin: -20px 0;
+}
+
+.connection-line {
+    width: 2px;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(139, 92, 246, 0.5), rgba(59, 130, 246, 0.5));
+    position: relative;
+}
+
+.connection-line::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #3b82f6;
+    border-radius: 50%;
+    bottom: -3px;
+    left: -2px;
+}
+
+.topology-databases {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+}
+
+/* Activity Heatmap */
+.activity-heatmap {
+    display: grid;
+    grid-template-rows: repeat(3, 30px);
+    grid-template-columns: repeat(60, 1fr);
+    gap: 2px;
+    margin-bottom: 16px;
+}
+
+.heatmap-cell {
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+}
+
+.activity-timeline {
+    display: flex;
+    justify-content: space-between;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.activity-legend {
+    display: flex;
+    gap: 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.legend-color.queries {
+    background: #3b82f6;
+}
+
+.legend-color.connections {
+    background: #10b981;
+}
+
+.legend-color.transactions {
+    background: #f59e0b;
+}
+
+/* Analytics Section */
+.analytics-section {
+    margin-bottom: 32px;
+}
+
+.analytics-charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 32px;
+}
+
+.chart-container.large {
+    height: 300px;
+}
+
+.analytics-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.analytics-stat {
+    background: rgba(15, 23, 42, 0.5);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.analytics-stat h5 {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin: 0 0 8px 0;
+}
+
+.analytics-stat .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 4px 0;
+}
+
+.analytics-stat .stat-detail {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+}
+
+/* Time Selector */
+.time-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.time-btn {
+    padding: 6px 12px;
+    background: rgba(51, 65, 85, 0.5);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.time-btn:hover {
+    background: rgba(51, 65, 85, 0.8);
+    color: #e2e8f0;
+}
+
+.time-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+}
+
+/* Bottom Grid */
+.bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+}
+
+/* Resource Utilization */
+.resource-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.resource-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.resource-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.resource-name {
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.resource-value {
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.resource-bar {
+    height: 8px;
+    background: rgba(51, 65, 85, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.resource-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.resource-fill.cpu {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.resource-fill.memory {
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.resource-fill.disk {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.resource-fill.network {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* Alerts */
+.alert-count {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 8px;
+    border-left: 3px solid;
+}
+
+.alert-item.info {
+    border-color: #3b82f6;
+}
+
+.alert-item.warning {
+    border-color: #f59e0b;
+}
+
+.alert-item.error {
+    border-color: #ef4444;
+}
+
+.alert-icon {
+    font-size: 1.25rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+}
+
+.alert-message {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.alert-time {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+.action-icon {
+    font-size: 1.5rem;
+}
+
+.action-text {
+    color: #e2e8f0;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Gauge */
+.metric-gauge {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.gauge-fill {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* Sparkline */
+.metric-sparkline {
+    height: 40px;
+    margin-bottom: 16px;
+}
+
+/* Replication Status */
+.replication-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #64748b;
+}
+
+.status-indicator.green {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.status-text {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .infrastructure-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .bottom-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .analytics-charts {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

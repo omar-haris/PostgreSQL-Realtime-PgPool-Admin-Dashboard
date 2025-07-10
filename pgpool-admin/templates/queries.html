@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Query Analysis - PgPool Admin{% endblock %}
+{% block page_title %}Query Analysis{% endblock %}
+
+{% block content %}
+<!-- Query Statistics Summary -->
+<div class="dashboard-grid">
+    <div class="card metric-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Queries</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="totalQueries">-</div>
+            <div class="metric-label">Executed today</div>
+        </div>
+    </div>
+
+    <div class="card metric-card">
+        <div class="card-header">
+            <h3 class="card-title">Slow Queries</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="slowQueries">-</div>
+            <div class="metric-label">&gt; 1 second</div>
+        </div>
+    </div>
+
+    <div class="card metric-card">
+        <div class="card-header">
+            <h3 class="card-title">Failed Queries</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="failedQueries">-</div>
+            <div class="metric-label">Errors today</div>
+        </div>
+    </div>
+
+    <div class="card metric-card">
+        <div class="card-header">
+            <h3 class="card-title">Avg Execution Time</h3>
+        </div>
+        <div class="card-content">
+            <div class="metric-value" id="avgExecTime">-</div>
+            <div class="metric-label">milliseconds</div>
+        </div>
+    </div>
+</div>
+
+<!-- Query Patterns -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Query Patterns</h3>
+    </div>
+    <div class="card-content">
+        <table id="queryPatternsTable">
+            <thead>
+                <tr>
+                    <th>Pattern</th>
+                    <th>Count</th>
+                    <th>Avg Time</th>
+                    <th>Total Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="5" style="text-align: center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Top Queries by Time -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Top Queries by Time</h3>
+    </div>
+    <div class="card-content">
+        <table id="topQueriesTable">
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Calls</th>
+                    <th>Total Time</th>
+                    <th>Mean Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="5" style="text-align: center;">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Query Distribution Chart -->
+<div class="charts-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Query Type Distribution</h3>
+        </div>
+        <div class="card-content">
+            <div class="chart-container">
+                <canvas id="queryTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Query Performance Timeline</h3>
+        </div>
+        <div class="card-content">
+            <div class="chart-container">
+                <canvas id="queryTimelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Query Modal -->
+<div id="queryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Query Details</h3>
+            <button class="modal-close" onclick="closeQueryModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <pre id="queryModalContent"></pre>
+            <div class="query-stats" id="queryModalStats"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: #1e293b;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #334155;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 24px;
+        cursor: pointer;
+    }
+
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .query-stats {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+    }
+
+    .query-stats .stat {
+        background: #0f172a;
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .query-stats .stat-label {
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
+
+    .query-stats .stat-value {
+        color: #f1f5f9;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Store queries in global object to avoid escaping issues
+window.queryData = {};
+</script>
+<script src="{{ url_for('static', filename='js/queries.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PgPool Admin Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <a href="https://openseawave.com" target="_blank" rel="noopener noreferrer">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="OPENSEWAVE" class="sidebar-logo">
+                    </a>
+                </div>
+                <h2>PgPool Admin</h2>
+                <div class="subtitle">OPENSEWAVE Dashboard</div>
+                <a href="https://openseawave.com" target="_blank" rel="noopener noreferrer" class="enterprise-badge-link">
+                    <div class="enterprise-badge">OPENSEWAVE</div>
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Overview</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('nodes') }}" class="nav-link {% if request.endpoint == 'nodes' %}active{% endif %}">
+                        <span class="nav-icon">🔗</span>
+                        <span class="nav-text">Pool Nodes</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('performance_monitor') }}" class="nav-link {% if request.endpoint == 'performance_monitor' %}active{% endif %}">
+                        <span class="nav-icon">⚡</span>
+                        <span class="nav-text">Performance</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('cluster_status') }}" class="nav-link {% if request.endpoint == 'cluster_status' %}active{% endif %}">
+                        <span class="nav-icon">🔧</span>
+                        <span class="nav-text">Cluster Status</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('queries') }}" class="nav-link {% if request.endpoint == 'queries' %}active{% endif %}">
+                        <span class="nav-icon">🔍</span>
+                        <span class="nav-text">Query Analysis</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('databases') }}" class="nav-link {% if request.endpoint == 'databases' %}active{% endif %}">
+                        <span class="nav-icon">🗄️</span>
+                        <span class="nav-text">Databases</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('insights') }}" class="nav-link {% if request.endpoint == 'insights' %}active{% endif %}">
+                        <span class="nav-icon">💡</span>
+                        <span class="nav-text">Insights</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('query_console') }}" class="nav-link {% if request.endpoint == 'query_console' %}active{% endif %}">
+                        <span class="nav-icon">💻</span>
+                        <span class="nav-text">Query Console</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+                        <span class="nav-icon">📜</span>
+                        <span class="nav-text">History</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span class="username">{{ username }}</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1>
+                    {% block page_title %}Dashboard{% endblock %}
+                    <a href="https://openseawave.com" target="_blank" rel="noopener noreferrer" class="enterprise-badge-link">
+                        <span class="enterprise-badge">
+                            <img src="{{ url_for('static', filename='logo.png') }}" alt="OPENSEWAVE" class="header-logo">
+                            OPENSEWAVE
+                        </span>
+                    </a>
+                </h1>
+                <div class="header-actions">
+                    {% include 'widgets/health_indicator.html' %}
+                </div>
+            </header>
+            
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

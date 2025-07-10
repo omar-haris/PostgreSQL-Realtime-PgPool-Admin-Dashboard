@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}History - PgPool Admin{% endblock %}
+{% block page_title %}History{% endblock %}
+
+{% block content %}
+<div class="history-container">
+    <!-- History Filters Card -->
+    <div class="card filters-card">
+        <div class="card-header">
+            <h3 class="card-title">🔍 Search & Filters</h3>
+            <div class="filter-actions">
+                <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+                    <span class="btn-icon">🔍</span>
+                    Apply Filters
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+                    <span class="btn-icon">🔄</span>
+                    Reset
+                </button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label">📅 Date Range</label>
+                    <div class="date-range-inputs">
+                        <input type="date" id="startDate" class="form-input" placeholder="Start Date">
+                        <span class="date-separator">to</span>
+                        <input type="date" id="endDate" class="form-input" placeholder="End Date">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">📋 Event Type</label>
+                    <select id="eventType" class="form-select">
+                        <option value="">All Events</option>
+                        <option value="query">Queries</option>
+                        <option value="connection">Connections</option>
+                        <option value="error">Errors</option>
+                        <option value="performance">Performance</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">🗄️ Database</label>
+                    <select id="databaseFilter" class="form-select">
+                        <option value="">All Databases</option>
+                        <option value="pgpool">PgPool</option>
+                        <option value="master">Master</option>
+                        <option value="replica">Replica</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">✅ Status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="success">Success</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Statistics Cards -->
+    <div class="stats-grid">
+        <div class="card metric-card">
+            <div class="card-header">
+                <h3 class="card-title">📊 Total Events</h3>
+            </div>
+            <div class="card-content">
+                <div class="metric-value" id="totalEvents">0</div>
+                <div class="metric-label">Events Recorded</div>
+                <div class="metric-trend">
+                    <span class="trend-icon">📈</span>
+                    <span class="trend-value">+12% from yesterday</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card metric-card">
+            <div class="card-header">
+                <h3 class="card-title">✅ Success Rate</h3>
+            </div>
+            <div class="card-content">
+                <div class="metric-value" id="successRate">98.5%</div>
+                <div class="metric-label">Successful Operations</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 98.5%; background: linear-gradient(90deg, #10b981, #059669);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card metric-card">
+            <div class="card-header">
+                <h3 class="card-title">⚠️ Recent Errors</h3>
+            </div>
+            <div class="card-content">
+                <div class="metric-value" id="errorCount">3</div>
+                <div class="metric-label">Last 24 Hours</div>
+                <div class="metric-trend error">
+                    <span class="trend-icon">📉</span>
+                    <span class="trend-value">-25% from yesterday</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card metric-card">
+            <div class="card-header">
+                <h3 class="card-title">⏱️ Avg Duration</h3>
+            </div>
+            <div class="card-content">
+                <div class="metric-value" id="avgDuration">245ms</div>
+                <div class="metric-label">Query Execution Time</div>
+                <div class="metric-chart">
+                    <canvas id="durationSparkline"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Timeline Chart -->
+    <div class="card timeline-card">
+        <div class="card-header">
+            <h3 class="card-title">📈 Activity Timeline</h3>
+            <div class="timeline-controls">
+                <button class="btn btn-secondary btn-sm" onclick="changeTimeRange('1h')">1H</button>
+                <button class="btn btn-secondary btn-sm" onclick="changeTimeRange('6h')">6H</button>
+                <button class="btn btn-secondary btn-sm active" onclick="changeTimeRange('24h')">24H</button>
+                <button class="btn btn-secondary btn-sm" onclick="changeTimeRange('7d')">7D</button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="card history-table-card">
+        <div class="card-header">
+            <h3 class="card-title">📚 Event History</h3>
+            <div class="table-actions">
+                <div class="search-box">
+                    <input type="text" id="searchInput" class="form-input" placeholder="Search events...">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="exportHistory()">
+                    <span class="btn-icon">📥</span>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="table-container">
+                <table id="historyTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Event Type</th>
+                            <th>Database</th>
+                            <th>User</th>
+                            <th>Description</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="8" class="loading-cell">
+                                <div class="loading"></div>
+                                <p>Loading history data...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-pagination">
+                <div class="pagination-info">
+                    Showing <span id="startRow">0</span> to <span id="endRow">0</span> of <span id="totalRows">0</span> entries
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn btn-secondary btn-sm" onclick="previousPage()" id="prevBtn">Previous</button>
+                    <span class="page-numbers" id="pageNumbers"></span>
+                    <button class="btn btn-secondary btn-sm" onclick="nextPage()" id="nextBtn">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div id="eventModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>📋 Event Details</h3>
+            <button class="modal-close" onclick="closeEventModal()">✕</button>
+        </div>
+        <div class="modal-body" id="eventDetails">
+            <!-- Event details will be dynamically inserted here -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEventModal()">Close</button>
+            <button class="btn btn-primary" onclick="copyEventDetails()">
+                <span class="btn-icon">📋</span>
+                Copy Details
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/history.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Pool Nodes - PgPool Admin{% endblock %}
+{% block page_title %}Pool Nodes Management{% endblock %}
+
+{% block content %}
+<div class="nodes-page-container">
+    <!-- Enterprise Header Section -->
+    <div class="enterprise-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h2 class="page-title">🏢 Infrastructure Overview</h2>
+                <p class="page-subtitle">Real-time monitoring and management of your database cluster</p>
+            </div>
+            <div class="header-right">
+                <div class="cluster-health">
+                    <div class="health-indicator" id="clusterHealth">
+                        <span class="health-icon">✅</span>
+                        <span class="health-text">Cluster Healthy</span>
+                    </div>
+                    <div class="last-updated">
+                        Last updated: <span id="lastUpdateTime">Just now</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Dashboard -->
+    <div class="metrics-dashboard">
+        <div class="metric-card primary">
+            <div class="metric-icon">🌐</div>
+            <div class="metric-content">
+                <div class="metric-value" id="totalNodes">3</div>
+                <div class="metric-label">Total Nodes</div>
+                <div class="metric-trend positive">
+                    <span class="trend-icon">↑</span>
+                    <span>100% Online</span>
+                </div>
+            </div>
+        </div>
+        <div class="metric-card success">
+            <div class="metric-icon">🔗</div>
+            <div class="metric-content">
+                <div class="metric-value" id="activeConnections">0</div>
+                <div class="metric-label">Active Connections</div>
+                <div class="metric-sublabel">of <span id="maxConnections">100</span> max</div>
+            </div>
+        </div>
+        <div class="metric-card info">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-content">
+                <div class="metric-value" id="throughput">0</div>
+                <div class="metric-label">Queries/sec</div>
+                <div class="metric-progress">
+                    <div class="progress-bar" id="throughputBar"></div>
+                </div>
+            </div>
+        </div>
+        <div class="metric-card warning">
+            <div class="metric-icon">💾</div>
+            <div class="metric-content">
+                <div class="metric-value" id="replicationLag">0ms</div>
+                <div class="metric-label">Replication Lag</div>
+                <div class="metric-status">
+                    <span class="status-dot green"></span>
+                    <span>Synchronized</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enterprise Node Architecture -->
+    <div class="card enterprise-card">
+        <div class="card-header">
+            <h3 class="card-title">🏗️ Cluster Architecture</h3>
+            <div class="card-actions">
+                <button class="btn btn-secondary btn-sm" onclick="refreshNodeData()">
+                    <span class="btn-icon">🔄</span>
+                    Refresh
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleAutoRefresh()">
+                    <span class="btn-icon" id="autoRefreshIcon">⏸️</span>
+                    <span id="autoRefreshText">Pause</span>
+                </button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="architecture-container" id="architectureContainer">
+                <!-- Dynamic architecture visualization will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Node Details Grid -->
+    <div class="nodes-grid">
+        <!-- PgPool Node Card -->
+        <div class="node-card pgpool" id="pgpoolCard">
+            <div class="node-card-header">
+                <div class="node-icon-wrapper pgpool">
+                    <span class="node-icon">🔄</span>
+                </div>
+                <div class="node-info">
+                    <h4 class="node-name">PgPool Load Balancer</h4>
+                    <span class="node-role">Connection Pooler & Router</span>
+                </div>
+                <div class="node-status-badge online">
+                    <span class="status-dot"></span>
+                    <span>Online</span>
+                </div>
+            </div>
+            <div class="node-card-body">
+                <div class="node-metrics">
+                    <div class="node-metric">
+                        <span class="metric-label">Connections</span>
+                        <span class="metric-value" id="pgpoolConnections">0</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">Memory</span>
+                        <span class="metric-value" id="pgpoolMemory">0%</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">CPU</span>
+                        <span class="metric-value" id="pgpoolCpu">0%</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">Uptime</span>
+                        <span class="metric-value" id="pgpoolUptime">0d</span>
+                    </div>
+                </div>
+                <div class="node-chart">
+                    <canvas id="pgpoolChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Master Node Card -->
+        <div class="node-card master" id="masterCard">
+            <div class="node-card-header">
+                <div class="node-icon-wrapper master">
+                    <span class="node-icon">👑</span>
+                </div>
+                <div class="node-info">
+                    <h4 class="node-name">Master Database</h4>
+                    <span class="node-role">Primary Read/Write Node</span>
+                </div>
+                <div class="node-status-badge online">
+                    <span class="status-dot"></span>
+                    <span>Online</span>
+                </div>
+            </div>
+            <div class="node-card-body">
+                <div class="node-metrics">
+                    <div class="node-metric">
+                        <span class="metric-label">Connections</span>
+                        <span class="metric-value" id="masterConnections">0</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">Memory</span>
+                        <span class="metric-value" id="masterMemory">0%</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">CPU</span>
+                        <span class="metric-value" id="masterCpu">0%</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">TPS</span>
+                        <span class="metric-value" id="masterTps">0</span>
+                    </div>
+                </div>
+                <div class="node-chart">
+                    <canvas id="masterChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Replica Node Card -->
+        <div class="node-card replica" id="replicaCard">
+            <div class="node-card-header">
+                <div class="node-icon-wrapper replica">
+                    <span class="node-icon">📋</span>
+                </div>
+                <div class="node-info">
+                    <h4 class="node-name">Replica Database</h4>
+                    <span class="node-role">Read-Only Node</span>
+                </div>
+                <div class="node-status-badge online">
+                    <span class="status-dot"></span>
+                    <span>Online</span>
+                </div>
+            </div>
+            <div class="node-card-body">
+                <div class="node-metrics">
+                    <div class="node-metric">
+                        <span class="metric-label">Connections</span>
+                        <span class="metric-value" id="replicaConnections">0</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">Memory</span>
+                        <span class="metric-value" id="replicaMemory">0%</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">CPU</span>
+                        <span class="metric-value" id="replicaCpu">0%</span>
+                    </div>
+                    <div class="node-metric">
+                        <span class="metric-label">Lag</span>
+                        <span class="metric-value" id="replicaLag">0ms</span>
+                    </div>
+                </div>
+                <div class="node-chart">
+                    <canvas id="replicaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Pool Analytics -->
+    <div class="card enterprise-card">
+        <div class="card-header">
+            <h3 class="card-title">📊 Connection Pool Analytics</h3>
+            <div class="time-range-selector">
+                <button class="time-btn active" onclick="changeTimeRange('5m')">5m</button>
+                <button class="time-btn" onclick="changeTimeRange('15m')">15m</button>
+                <button class="time-btn" onclick="changeTimeRange('1h')">1h</button>
+                <button class="time-btn" onclick="changeTimeRange('6h')">6h</button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="analytics-grid">
+                <div class="chart-container large">
+                    <canvas id="poolAnalyticsChart"></canvas>
+                </div>
+                <div class="pool-stats">
+                    <div class="stat-box">
+                        <h5>Current Pool Status</h5>
+                        <div class="pool-stat">
+                            <span class="stat-label">Active</span>
+                            <span class="stat-value" id="poolActive">0</span>
+                        </div>
+                        <div class="pool-stat">
+                            <span class="stat-label">Idle</span>
+                            <span class="stat-value" id="poolIdle">0</span>
+                        </div>
+                        <div class="pool-stat">
+                            <span class="stat-label">Waiting</span>
+                            <span class="stat-value" id="poolWaiting">0</span>
+                        </div>
+                        <div class="pool-stat">
+                            <span class="stat-label">Max Size</span>
+                            <span class="stat-value" id="poolMax">100</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Processes Table -->
+    <div class="card enterprise-card">
+        <div class="card-header">
+            <h3 class="card-title">🔄 Active Pool Processes</h3>
+            <div class="table-controls">
+                <input type="text" class="search-input" placeholder="Search processes..." id="processSearch">
+                <select class="filter-select" id="processFilter">
+                    <option value="all">All States</option>
+                    <option value="active">Active</option>
+                    <option value="idle">Idle</option>
+                    <option value="waiting">Waiting</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="table-responsive">
+                <table class="enterprise-table" id="processesTable">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Database</th>
+                            <th>User</th>
+                            <th>Client IP</th>
+                            <th>Application</th>
+                            <th>State</th>
+                            <th>Duration</th>
+                            <th>Query</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="9" class="loading-cell">
+                                <div class="loading"></div>
+                                <p>Loading processes...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/nodes.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Database Management - PgPool Admin{% endblock %}
+{% block page_title %}Database Management{% endblock %}
+
+{% block content %}
+<div class="databases-container">
+    <!-- Database Overview Header -->
+    <div class="database-header">
+        <div class="header-content">
+            <div class="header-info">
+                <h2 class="section-title">🗄️ Database Overview</h2>
+                <p class="section-subtitle">Manage and monitor individual databases in your cluster</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="refreshDatabaseList()">
+                    <span class="btn-icon">🔄</span>
+                    Refresh
+                </button>
+                <button class="btn btn-primary" onclick="showCreateDatabaseModal()">
+                    <span class="btn-icon">➕</span>
+                    Create Database
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Statistics Summary -->
+    <div class="db-stats-grid">
+        <div class="db-stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-value" id="totalDatabases">0</div>
+                <div class="stat-label">Total Databases</div>
+            </div>
+        </div>
+        <div class="db-stat-card">
+            <div class="stat-icon">💾</div>
+            <div class="stat-content">
+                <div class="stat-value" id="totalSize">0 MB</div>
+                <div class="stat-label">Total Size</div>
+            </div>
+        </div>
+        <div class="db-stat-card">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-content">
+                <div class="stat-value" id="activeConnections">0</div>
+                <div class="stat-label">Active Connections</div>
+            </div>
+        </div>
+        <div class="db-stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <div class="stat-value" id="queryRate">0/s</div>
+                <div class="stat-label">Query Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database List -->
+    <div class="card database-list-card">
+        <div class="card-header">
+            <h3 class="card-title">📚 Databases</h3>
+            <div class="search-box">
+                <input type="text" id="dbSearchInput" class="form-input" placeholder="Search databases...">
+                <span class="search-icon">🔍</span>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="database-grid" id="databaseGrid">
+                <!-- Database cards will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Tools -->
+    <div class="database-tools-grid">
+        <!-- Query Analyzer -->
+        <div class="card tool-card">
+            <div class="card-header">
+                <h3 class="card-title">🔍 Query Analyzer</h3>
+            </div>
+            <div class="card-content">
+                <div class="tool-description">
+                    <p>Analyze query performance and execution plans</p>
+                </div>
+                <div class="tool-form">
+                    <select id="analyzerDatabase" class="form-select mb-3">
+                        <option value="">Select Database</option>
+                    </select>
+                    <textarea id="analyzerQuery" class="form-input query-input" 
+                        placeholder="Enter SQL query to analyze..." rows="4"></textarea>
+                    <div class="tool-actions">
+                        <button class="btn btn-primary" onclick="analyzeQuery()">
+                            <span class="btn-icon">🔬</span>
+                            Analyze Query
+                        </button>
+                        <button class="btn btn-secondary" onclick="explainQuery()">
+                            <span class="btn-icon">📋</span>
+                            Explain Plan
+                        </button>
+                    </div>
+                </div>
+                <div id="analyzerResults" class="tool-results"></div>
+            </div>
+        </div>
+
+        <!-- Database Statistics -->
+        <div class="card tool-card">
+            <div class="card-header">
+                <h3 class="card-title">📊 Database Statistics</h3>
+            </div>
+            <div class="card-content">
+                <div class="tool-description">
+                    <p>View detailed statistics for a specific database</p>
+                </div>
+                <div class="tool-form">
+                    <select id="statsDatabase" class="form-select mb-3" onchange="loadDatabaseStats()">
+                        <option value="">Select Database</option>
+                    </select>
+                    <div id="databaseStats" class="database-stats">
+                        <div class="stats-placeholder">
+                            Select a database to view statistics
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Inspector -->
+        <div class="card tool-card">
+            <div class="card-header">
+                <h3 class="card-title">🔧 Table Inspector</h3>
+            </div>
+            <div class="card-content">
+                <div class="tool-description">
+                    <p>Inspect table structure, indexes, and constraints</p>
+                </div>
+                <div class="tool-form">
+                    <select id="inspectorDatabase" class="form-select mb-3" onchange="loadDatabaseTables()">
+                        <option value="">Select Database</option>
+                    </select>
+                    <select id="inspectorTable" class="form-select mb-3" onchange="inspectTable()">
+                        <option value="">Select Table</option>
+                    </select>
+                    <div id="tableInfo" class="table-info"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup & Maintenance -->
+        <div class="card tool-card">
+            <div class="card-header">
+                <h3 class="card-title">🛡️ Backup & Maintenance</h3>
+            </div>
+            <div class="card-content">
+                <div class="tool-description">
+                    <p>Database backup and maintenance operations</p>
+                </div>
+                <div class="tool-form">
+                    <select id="maintenanceDatabase" class="form-select mb-3">
+                        <option value="">Select Database</option>
+                    </select>
+                    <div class="maintenance-actions">
+                        <button class="btn btn-primary" onclick="backupDatabase()">
+                            <span class="btn-icon">💾</span>
+                            Backup Database
+                        </button>
+                        <button class="btn btn-secondary" onclick="vacuumDatabase()">
+                            <span class="btn-icon">🧹</span>
+                            VACUUM
+                        </button>
+                        <button class="btn btn-secondary" onclick="analyzeDatabase()">
+                            <span class="btn-icon">📈</span>
+                            ANALYZE
+                        </button>
+                        <button class="btn btn-secondary" onclick="reindexDatabase()">
+                            <span class="btn-icon">📑</span>
+                            REINDEX
+                        </button>
+                    </div>
+                    <div id="maintenanceLog" class="maintenance-log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Queries per Database -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">⚡ Active Queries by Database</h3>
+        </div>
+        <div class="card-content">
+            <div class="table-responsive">
+                <table class="data-table" id="activeQueriesTable">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Database</th>
+                            <th>User</th>
+                            <th>Query</th>
+                            <th>Duration</th>
+                            <th>State</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" class="loading-cell">
+                                <div class="loading"></div>
+                                <p>Loading active queries...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Database Modal -->
+<div id="createDatabaseModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>➕ Create New Database</h3>
+            <button class="modal-close" onclick="closeCreateDatabaseModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="createDatabaseForm">
+                <div class="form-group">
+                    <label class="form-label">Database Name</label>
+                    <input type="text" id="newDbName" class="form-input" placeholder="Enter database name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Owner</label>
+                    <select id="newDbOwner" class="form-select" required>
+                        <option value="">Select owner</option>
+                        <option value="postgres">postgres</option>
+                        <option value="app_user">app_user</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Encoding</label>
+                    <select id="newDbEncoding" class="form-select">
+                        <option value="UTF8">UTF8</option>
+                        <option value="LATIN1">LATIN1</option>
+                        <option value="SQL_ASCII">SQL_ASCII</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Template</label>
+                    <select id="newDbTemplate" class="form-select">
+                        <option value="template1">template1</option>
+                        <option value="template0">template0</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeCreateDatabaseModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="createDatabase()">
+                <span class="btn-icon">✅</span>
+                Create Database
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/databases.js') }}"></script>
+{% endblock %}

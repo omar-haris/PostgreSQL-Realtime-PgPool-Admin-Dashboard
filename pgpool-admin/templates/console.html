@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Query Console - PgPool Admin{% endblock %}
+{% block page_title %}Query Console{% endblock %}
+
+{% block content %}
+<div class="console-container">
+    <!-- Query Editor Card -->
+    <div class="card query-editor-card">
+        <div class="card-header">
+            <h3 class="card-title">🖥️ SQL Query Console</h3>
+            <div class="database-selector">
+                <label>🎯 Target Database:</label>
+                <select id="databaseSelect" class="form-select" onchange="updateDatabaseIndicator()">
+                    <option value="pgpool">PgPool (Load Balancer)</option>
+                    <option value="master">Master (Primary)</option>
+                    <option value="replica">Replica (Read-Only)</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="editor-toolbar">
+                <div class="toolbar-left">
+                    <div class="query-templates">
+                        <button class="btn btn-secondary btn-sm" onclick="insertSampleQuery('select')">
+                            <span class="btn-icon">📄</span>
+                            SELECT
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="insertSampleQuery('stats')">
+                            <span class="btn-icon">📊</span>
+                            Stats
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="insertSampleQuery('activity')">
+                            <span class="btn-icon">⚡</span>
+                            Activity
+                        </button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-secondary btn-sm" onclick="clearQuery()">
+                        <span class="btn-icon">🗑️</span>
+                        Clear
+                    </button>
+                    <button class="btn btn-primary" id="executeBtn" onclick="executeQuery()">
+                        <span class="btn-icon">▶️</span>
+                        Execute Query
+                    </button>
+                </div>
+            </div>
+            <div class="query-editor-wrapper">
+                <textarea id="queryInput" class="query-input" placeholder="-- Enter your SQL query here
+-- Example: SELECT * FROM pg_stat_activity LIMIT 10;
+-- Press Ctrl+Enter to execute"></textarea>
+                <div class="database-indicator" id="databaseIndicator">
+                    <span class="indicator-icon">🗄️</span>
+                    <span class="indicator-text">Queries will be executed on: <strong id="selectedDbName">PgPool (Load Balancer)</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Execution Stats Card -->
+    <div class="card execution-stats-card" id="executionStats" style="display: none;">
+        <div class="card-header">
+            <h3 class="card-title">📈 Execution Statistics</h3>
+        </div>
+        <div class="card-content">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-icon">🔢</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Rows Affected</div>
+                        <div class="stat-value" id="rowsAffected">0</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Execution Time</div>
+                        <div class="stat-value" id="executionTime">0ms</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Query Type</div>
+                        <div class="stat-value" id="queryType">-</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🌐</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Target</div>
+                        <div class="stat-value" id="targetDatabase">PgPool</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Card -->
+    <div class="card results-card">
+        <div class="card-header">
+            <h3 class="card-title">📋 Query Results</h3>
+            <div class="results-actions">
+                <span id="resultCount" class="result-count-badge"></span>
+                <button class="btn btn-secondary btn-sm" id="exportBtn" onclick="exportResults()" style="display: none;">
+                    <span class="btn-icon">📥</span>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="results-content" id="resultsContent">
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <h4>No Results Yet</h4>
+                    <p>Execute a query to see results here</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query History Card -->
+    <div class="card history-card">
+        <div class="card-header">
+            <h3 class="card-title">📚 Query History</h3>
+            <button class="btn btn-secondary btn-sm" onclick="clearHistory()">
+                <span class="btn-icon">🗑️</span>
+                Clear History
+            </button>
+        </div>
+        <div class="card-content">
+            <div class="query-history" id="queryHistory">
+                <div class="empty-state">
+                    <div class="empty-icon">📜</div>
+                    <p>No queries executed yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/console.js') }}"></script>
+{% endblock %}

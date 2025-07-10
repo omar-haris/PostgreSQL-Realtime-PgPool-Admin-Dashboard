@@ -1,0 +1,691 @@
+{% extends "base.html" %}
+
+{% block title %}Cluster Status - PgPool Admin{% endblock %}
+{% block page_title %}Cluster Status{% endblock %}
+
+{% block content %}
+<div class="cluster-status-container">
+    <!-- Cluster Health Overview -->
+    <div class="cluster-health-overview">
+        <div class="health-header">
+            <div class="health-left">
+                <h2 class="health-title">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="OPENSEWAVE" class="health-logo">
+                    Cluster Health Monitor
+                </h2>
+                <p class="health-subtitle">Real-time monitoring of PostgreSQL cluster components</p>
+            </div>
+            <div class="health-right">
+                <div class="cluster-health-score">
+                    <div class="health-score-circle">
+                        <svg width="100" height="100">
+                            <circle cx="50" cy="50" r="40" class="health-bg-circle"></circle>
+                            <circle cx="50" cy="50" r="40" class="health-score-circle" id="healthScoreCircle"></circle>
+                        </svg>
+                        <div class="health-score-content">
+                            <span class="health-score-value" id="clusterHealthScore">0</span>
+                            <span class="health-score-label">Health</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="health-actions">
+                    <button class="btn btn-primary" id="refreshClusterStatus">
+                        <span class="btn-icon">🔄</span> Refresh
+                    </button>
+                    <button class="btn btn-secondary" id="exportClusterReport">
+                        <span class="btn-icon">📊</span> Export Report
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cluster Summary Cards -->
+        <div class="cluster-summary-cards">
+            <div class="summary-card">
+                <div class="summary-icon">🟢</div>
+                <div class="summary-content">
+                    <div class="summary-value" id="onlineComponents">0</div>
+                    <div class="summary-label">Online</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">🔴</div>
+                <div class="summary-content">
+                    <div class="summary-value" id="offlineComponents">0</div>
+                    <div class="summary-label">Offline</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">⚠️</div>
+                <div class="summary-content">
+                    <div class="summary-value" id="warningComponents">0</div>
+                    <div class="summary-label">Warnings</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">⏱️</div>
+                <div class="summary-content">
+                    <div class="summary-value" id="avgResponseTime">0ms</div>
+                    <div class="summary-label">Avg Response</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Component Status Grid -->
+    <div class="components-section">
+        <div class="section-header">
+            <h3>🔧 Component Status</h3>
+            <div class="last-update">
+                Last updated: <span id="lastUpdateTime">-</span>
+            </div>
+        </div>
+        
+        <div class="components-grid" id="componentsGrid">
+            <!-- Component cards will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Historical Status Charts -->
+    <div class="history-section">
+        <div class="section-header">
+            <h3>📈 Status History</h3>
+            <div class="time-range-selector">
+                <button class="time-btn active" data-hours="1">1 Hour</button>
+                <button class="time-btn" data-hours="6">6 Hours</button>
+                <button class="time-btn" data-hours="24">24 Hours</button>
+                <button class="time-btn" data-hours="168">7 Days</button>
+            </div>
+        </div>
+        
+        <div class="history-charts">
+            <div class="chart-container">
+                <canvas id="responseTimeChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="availabilityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Events -->
+    <div class="events-section">
+        <div class="section-header">
+            <h3>🚨 Recent Events</h3>
+            <div class="event-filters">
+                <button class="filter-btn active" data-severity="all">All</button>
+                <button class="filter-btn" data-severity="critical">Critical</button>
+                <button class="filter-btn" data-severity="warning">Warning</button>
+                <button class="filter-btn" data-severity="info">Info</button>
+            </div>
+        </div>
+        
+        <div class="events-container" id="eventsContainer">
+            <!-- Events will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Component Details Modal -->
+    <div class="modal-overlay" id="componentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Component Details</h3>
+                <button class="modal-close" id="closeModal">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Component details will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Cluster Status Styles */
+.cluster-status-container {
+    padding: 24px;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.cluster-health-overview {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 32px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.health-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+}
+
+.health-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.health-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.health-subtitle {
+    color: #94a3b8;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.health-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.cluster-health-score {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.health-bg-circle {
+    fill: none;
+    stroke: rgba(51, 65, 85, 0.5);
+    stroke-width: 8;
+}
+
+.health-score-circle {
+    fill: none;
+    stroke: #10b981;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 251;
+    stroke-dashoffset: 251;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 1s ease, stroke 0.3s ease;
+}
+
+.health-score-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.health-score-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.health-score-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.health-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.cluster-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.summary-card {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.summary-icon {
+    font-size: 2rem;
+}
+
+.summary-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+/* Components Section */
+.components-section {
+    margin-bottom: 32px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.25rem;
+}
+
+.last-update {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.components-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+}
+
+.component-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.component-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.component-card.online {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.component-card.offline {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.component-card.warning {
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.component-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.component-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.component-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.component-status.online {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.component-status.offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.component-status.warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.component-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.component-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.metric-label {
+    color: #94a3b8;
+}
+
+.metric-value {
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.component-error {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 0.875rem;
+}
+
+/* History Section */
+.history-section {
+    margin-bottom: 32px;
+}
+
+.time-range-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.time-btn {
+    padding: 8px 16px;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.time-btn:hover {
+    background: rgba(51, 65, 85, 0.8);
+    color: #e2e8f0;
+}
+
+.time-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+}
+
+.history-charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+}
+
+.chart-container {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    height: 300px;
+}
+
+/* Events Section */
+.events-section {
+    margin-bottom: 32px;
+}
+
+.event-filters {
+    display: flex;
+    gap: 8px;
+}
+
+.filter-btn {
+    padding: 6px 12px;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    background: rgba(51, 65, 85, 0.8);
+    color: #e2e8f0;
+}
+
+.filter-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+}
+
+.events-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    border-radius: 12px;
+    background: rgba(30, 41, 59, 0.5);
+    margin-top: 20px;
+}
+
+.event-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.event-item:last-child {
+    border-bottom: none;
+}
+
+.event-severity {
+    width: 8px;
+    height: 40px;
+    border-radius: 4px;
+}
+
+.event-severity.critical {
+    background: #ef4444;
+}
+
+.event-severity.warning {
+    background: #f59e0b;
+}
+
+.event-severity.info {
+    background: #3b82f6;
+}
+
+.event-content {
+    flex: 1;
+}
+
+.event-message {
+    color: #f1f5f9;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.event-meta {
+    color: #64748b;
+    font-size: 0.75rem;
+    display: flex;
+    gap: 12px;
+}
+
+.event-timestamp {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: rgba(30, 41, 59, 0.95);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 16px;
+    padding: 0;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #e2e8f0;
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .health-header {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .health-right {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    
+    .cluster-summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .components-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .history-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Scrollbar Styling */
+.events-container::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.events-container::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+    background: rgba(51, 65, 85, 0.3);
+    border-radius: 4px;
+}
+
+.events-container::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.5);
+    border-radius: 4px;
+}
+
+.events-container::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.8);
+}
+
+/* Loading States */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
+    border-top-color: #3b82f6;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/cluster-status.js') }}"></script>
+{% endblock %}

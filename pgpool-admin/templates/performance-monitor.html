@@ -1,0 +1,832 @@
+{% extends "base.html" %}
+
+{% block title %}Real-time Performance Monitor - PgPool Admin{% endblock %}
+{% block page_title %}Real-time Performance Monitor{% endblock %}
+
+{% block content %}
+<div class="performance-monitor-container">
+    <!-- Performance Header -->
+    <div class="performance-header">
+        <div class="header-left">
+            <h2 class="monitor-title">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="OPENSEWAVE" class="monitor-logo">
+                Enterprise Performance Analytics
+            </h2>
+            <p class="monitor-subtitle">Real-time monitoring and advanced analytics for your PostgreSQL cluster</p>
+        </div>
+        <div class="header-right">
+            <div class="performance-score-widget">
+                <svg width="120" height="120" class="score-svg">
+                    <circle cx="60" cy="60" r="50" class="score-bg"></circle>
+                    <circle cx="60" cy="60" r="50" class="score-fill" id="performanceScoreCircle"></circle>
+                </svg>
+                <div class="score-content">
+                    <span class="score-value" id="performanceScore">0</span>
+                    <span class="score-label">Performance</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="refreshPerformance">
+                    <span class="btn-icon">🔄</span> Refresh
+                </button>
+                <button class="btn btn-secondary" id="exportPerformance">
+                    <span class="btn-icon">📊</span> Export
+                </button>
+                <button class="btn btn-secondary" id="performanceSettings">
+                    <span class="btn-icon">⚙️</span> Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Summary -->
+    <div class="metrics-summary">
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-icon">🔗</span>
+                <span class="metric-title">Connections</span>
+            </div>
+            <div class="metric-value">
+                <span id="metric-activeConnections">0</span>
+                <span class="metric-unit">/ <span id="metric-totalConnections">0</span></span>
+            </div>
+            <div class="metric-progress">
+                <div class="progress-bar" id="connectionPoolProgress"></div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-icon">⚡</span>
+                <span class="metric-title">Query Rate</span>
+            </div>
+            <div class="metric-value">
+                <span id="metric-qps">0</span>
+                <span class="metric-unit">QPS</span>
+            </div>
+            <div class="trend-indicator" id="trend-qps">↑</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-icon">⏱️</span>
+                <span class="metric-title">Response Time</span>
+            </div>
+            <div class="metric-value">
+                <span id="metric-avgResponseTime">0ms</span>
+            </div>
+            <div class="trend-indicator" id="trend-responseTime">↓</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-icon">💾</span>
+                <span class="metric-title">Cache Hit</span>
+            </div>
+            <div class="metric-value">
+                <span id="metric-cacheHitRate">0%</span>
+            </div>
+            <div class="metric-gauge">
+                <div class="gauge-fill" id="cacheHitGaugeBar"></div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-icon">🔄</span>
+                <span class="metric-title">Replication</span>
+            </div>
+            <div class="metric-value">
+                <span id="metric-replicationLag">0 B</span>
+            </div>
+            <div class="replication-status online">Synchronized</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <span class="metric-icon">❌</span>
+                <span class="metric-title">Error Rate</span>
+            </div>
+            <div class="metric-value">
+                <span id="metric-errorRate">0.00%</span>
+            </div>
+            <div class="trend-indicator down" id="trend-errorRate">↓</div>
+        </div>
+    </div>
+
+    <!-- Time Range Selector -->
+    <div class="time-range-selector">
+        <button class="time-range-btn active" data-range="5m">5 Min</button>
+        <button class="time-range-btn" data-range="15m">15 Min</button>
+        <button class="time-range-btn" data-range="1h">1 Hour</button>
+        <button class="time-range-btn" data-range="6h">6 Hours</button>
+        <button class="time-range-btn" data-range="24h">24 Hours</button>
+    </div>
+
+    <!-- Performance Charts Grid -->
+    <div class="performance-charts-grid">
+        <!-- Connection Pool Chart -->
+        <div class="chart-container">
+            <canvas id="connectionPoolChart"></canvas>
+        </div>
+
+        <!-- Query Performance Chart -->
+        <div class="chart-container">
+            <canvas id="queryPerformanceChart"></canvas>
+        </div>
+
+        <!-- Resource Utilization Chart -->
+        <div class="chart-container">
+            <canvas id="resourceChart"></canvas>
+        </div>
+
+        <!-- Cache Performance Gauge -->
+        <div class="chart-container gauge-container">
+            <h3 class="chart-title">Cache Performance</h3>
+            <canvas id="cacheHitGauge" width="240" height="200"></canvas>
+        </div>
+
+        <!-- Replication Status Chart -->
+        <div class="chart-container">
+            <canvas id="replicationChart"></canvas>
+        </div>
+
+        <!-- Error Rate Chart -->
+        <div class="chart-container">
+            <canvas id="errorRateChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Performance Alerts -->
+    <div class="performance-alerts-section">
+        <div class="alerts-header">
+            <h3>🚨 Performance Alerts</h3>
+            <span class="alert-badge" id="alertCount">0</span>
+        </div>
+        <div class="alerts-container" id="performanceAlerts">
+            <!-- Alerts will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Advanced Analytics -->
+    <div class="advanced-analytics">
+        <div class="analytics-card">
+            <h3>🔍 Query Analytics</h3>
+            <div class="analytics-content">
+                <div class="stat-row">
+                    <span class="stat-label">Total Queries Today:</span>
+                    <span class="stat-value" id="metric-totalQueries">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Slow Queries:</span>
+                    <span class="stat-value" id="slowQueryCount">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Failed Queries:</span>
+                    <span class="stat-value" id="failedQueryCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-card">
+            <h3>💻 Resource Analytics</h3>
+            <div class="analytics-content">
+                <div class="resource-meter">
+                    <span class="resource-label">CPU Usage</span>
+                    <div class="resource-bar">
+                        <div class="resource-fill cpu" id="cpuBar"></div>
+                    </div>
+                    <span class="resource-value" id="metric-cpuUsage">0%</span>
+                </div>
+                <div class="resource-meter">
+                    <span class="resource-label">Memory Usage</span>
+                    <div class="resource-bar">
+                        <div class="resource-fill memory" id="memBar"></div>
+                    </div>
+                    <span class="resource-value" id="metric-memoryUsage">0%</span>
+                </div>
+                <div class="resource-meter">
+                    <span class="resource-label">Disk I/O</span>
+                    <div class="resource-bar">
+                        <div class="resource-fill disk" id="diskBar"></div>
+                    </div>
+                    <span class="resource-value" id="metric-diskIO">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-card">
+            <h3>📊 Predictive Analytics</h3>
+            <div class="analytics-content">
+                <div class="prediction-item">
+                    <span class="prediction-label">Load Trend:</span>
+                    <span class="prediction-value increasing">Increasing</span>
+                </div>
+                <div class="prediction-item">
+                    <span class="prediction-label">Resource Exhaustion:</span>
+                    <span class="prediction-value safe">No Risk</span>
+                </div>
+                <div class="prediction-item">
+                    <span class="prediction-label">Performance Forecast:</span>
+                    <span class="prediction-value optimal">Optimal</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Performance Monitor Styles */
+.performance-monitor-container {
+    padding: 24px;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.performance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    padding: 32px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.monitor-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.monitor-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.monitor-subtitle {
+    color: #94a3b8;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.performance-score-widget {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.score-svg {
+    transform: rotate(-90deg);
+}
+
+.score-bg {
+    fill: none;
+    stroke: rgba(51, 65, 85, 0.5);
+    stroke-width: 10;
+}
+
+.score-fill {
+    fill: none;
+    stroke: #10b981;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 314;
+    stroke-dashoffset: 314;
+    transition: stroke-dashoffset 1s ease, stroke 0.3s ease;
+}
+
+.score-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.score-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.score-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Metrics Summary */
+.metrics-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.metric-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.metric-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.metric-icon {
+    font-size: 1.25rem;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.metric-unit {
+    font-size: 1rem;
+    color: #64748b;
+    font-weight: 400;
+}
+
+.metric-progress {
+    margin-top: 12px;
+    height: 6px;
+    background: rgba(51, 65, 85, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    transition: width 0.5s ease;
+}
+
+.trend-indicator {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: 8px;
+}
+
+.trend-indicator.up {
+    color: #10b981;
+}
+
+.trend-indicator.down {
+    color: #ef4444;
+}
+
+.trend-indicator.stable {
+    color: #f59e0b;
+}
+
+.metric-gauge {
+    margin-top: 12px;
+    height: 8px;
+    background: rgba(51, 65, 85, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    transition: width 0.5s ease;
+}
+
+.replication-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.replication-status.online {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.replication-status.lagging {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.replication-status.offline {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* Time Range Selector */
+.time-range-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding: 8px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.time-range-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.time-range-btn:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #e2e8f0;
+}
+
+.time-range-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+}
+
+/* Performance Charts Grid */
+.performance-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.chart-container {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    height: 300px;
+    position: relative;
+}
+
+.chart-container canvas {
+    max-height: 100%;
+}
+
+.gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+/* Performance Alerts */
+.performance-alerts-section {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.alerts-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.alerts-header h3 {
+    margin: 0;
+    color: #f1f5f9;
+}
+
+.alert-badge {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.alerts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.performance-alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 8px;
+    border-left: 4px solid;
+    position: relative;
+}
+
+.performance-alert.critical {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.performance-alert.warning {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.performance-alert.info {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.alert-icon {
+    font-size: 1.25rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-message {
+    color: #f1f5f9;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+}
+
+.alert-time {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.alert-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.alert-close:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #e2e8f0;
+}
+
+/* Advanced Analytics */
+.advanced-analytics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+.analytics-card {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.3);
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.analytics-card h3 {
+    margin: 0 0 20px 0;
+    color: #f1f5f9;
+    font-size: 1.125rem;
+}
+
+.analytics-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.stat-value {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.resource-meter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.resource-label {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    min-width: 100px;
+}
+
+.resource-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(51, 65, 85, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.resource-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+}
+
+.resource-fill.cpu {
+    background: linear-gradient(90deg, #06b6d4, #0891b2);
+}
+
+.resource-fill.memory {
+    background: linear-gradient(90deg, #ec4899, #db2777);
+}
+
+.resource-fill.disk {
+    background: linear-gradient(90deg, #f97316, #ea580c);
+}
+
+.resource-value {
+    color: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.875rem;
+    min-width: 50px;
+    text-align: right;
+}
+
+.prediction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+}
+
+.prediction-label {
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.prediction-value {
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.prediction-value.increasing {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.prediction-value.decreasing {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.prediction-value.safe {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.prediction-value.risk {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.prediction-value.optimal {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .performance-charts-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .advanced-analytics {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .performance-header {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .header-right {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+    
+    .metrics-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .time-range-selector {
+        flex-wrap: wrap;
+    }
+}
+
+/* Scrollbar Styling */
+.alerts-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.alerts-container::-webkit-scrollbar-track {
+    background: rgba(51, 65, 85, 0.3);
+    border-radius: 4px;
+}
+
+.alerts-container::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.5);
+    border-radius: 4px;
+}
+
+.alerts-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.8);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/performance-monitor.js') }}"></script>
+{% endblock %}

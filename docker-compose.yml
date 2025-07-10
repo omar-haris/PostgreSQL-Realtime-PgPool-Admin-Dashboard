@@ -1,0 +1,99 @@
+services:
+  postgres-master:
+    image: postgres:16
+    container_name: pg-master
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - master_data:/var/lib/postgresql/data
+      - ./postgres-master/custom-postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres-master/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+    ports:
+      - "6435:6435"
+    networks:
+      - pgnet
+
+  postgres-replica:
+    image: postgres:16
+    container_name: pg-replica
+    restart: always
+    depends_on:
+      - postgres-master
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - replica_data:/var/lib/postgresql/data
+      - ./postgres-replica/custom-postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres-replica/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    command: >
+      bash -c "
+        sleep 10 &&
+        rm -rf /var/lib/postgresql/data/* &&
+        PGPASSWORD=${POSTGRES_PASSWORD} pg_basebackup -h pg-master -p 6435 -D /var/lib/postgresql/data -U ${POSTGRES_USER} -Fp -Xs -P -R &&
+        chown -R postgres:postgres /var/lib/postgresql/data &&
+        chmod 700 /var/lib/postgresql/data &&
+        exec gosu postgres postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf"
+    ports:
+      - "6437:6435"
+    networks:
+      - pgnet
+
+  pgpool:
+    image: bitnami/pgpool:latest
+    container_name: pgpool
+    restart: always
+    ports:
+      - "6436:5432"
+    depends_on:
+      - postgres-master
+      - postgres-replica
+    environment:
+      PGPOOL_BACKEND_NODES: 0:pg-master:6435,1:pg-replica:6435
+      PGPOOL_POSTGRES_USERNAME: ${POSTGRES_USER}
+      PGPOOL_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGPOOL_SR_CHECK_USER: ${POSTGRES_USER}
+      PGPOOL_SR_CHECK_PASSWORD: ${POSTGRES_PASSWORD}
+      PGPOOL_ENABLE_LOAD_BALANCING: "yes"
+      PGPOOL_ENABLE_LOG_CONNECTIONS: "yes"
+      PGPOOL_ENABLE_LOG_PER_NODE_STATEMENT: "yes"
+      PGPOOL_DISABLE_LOAD_BALANCE_ON_WRITE: "off"
+      PGPOOL_STATEMENT_LEVEL_LOAD_BALANCE: "on"
+      PGPOOL_ENABLE_STATEMENT_LEVEL_LOAD_BALANCE: "yes"
+      PGPOOL_ADMIN_USERNAME: ${PGPOOL_ADMIN_USERNAME}
+      PGPOOL_ADMIN_PASSWORD: ${PGPOOL_ADMIN_PASSWORD}
+    volumes:
+      - ./pgpool/pgpool.conf:/opt/bitnami/pgpool/conf/pgpool.conf
+    networks:
+      - pgnet
+
+  pgpool-admin:
+    build: ./pgpool-admin
+    container_name: pgpool-admin
+    restart: always
+    ports:
+      - "9000:9000"
+    depends_on:
+      - pgpool
+    environment:
+      PGPOOL_HOST: pgpool
+      PGPOOL_PORT: 5432
+      PGPOOL_USER: ${POSTGRES_USER}
+      PGPOOL_PASSWORD: ${POSTGRES_PASSWORD}
+      PGPOOL_DB: ${POSTGRES_DB}
+      PGPOOL_ADMIN_USERNAME: ${PGPOOL_ADMIN_USERNAME}
+      PGPOOL_ADMIN_PASSWORD: ${PGPOOL_ADMIN_PASSWORD}
+    networks:
+      - pgnet
+
+volumes:
+  master_data:
+  replica_data:
+
+networks:
+  pgnet:
