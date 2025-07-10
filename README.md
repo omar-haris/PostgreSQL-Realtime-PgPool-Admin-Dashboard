@@ -92,9 +92,6 @@ psql -h localhost -p 6437 -U appuser -d appdb
 
 ## Screenshots
 
-<details>
-<summary>Click to view screenshots</summary>
-
 | Feature | Screenshot |
 |---------|------------|
 | Login | <img src="docs/Screenshot-2025-07-10-at-7.02.43-PM.png" alt="Login" width="600"/> |
@@ -102,8 +99,6 @@ psql -h localhost -p 6437 -U appuser -d appdb
 | Pool Nodes | <img src="docs/Screenshot-2025-07-10-at-7.04.16-PM.png" alt="Pool Nodes" width="600"/> |
 | Performance | <img src="docs/Screenshot-2025-07-10-at-7.04.21-PM.png" alt="Performance" width="600"/> |
 | Query Analysis | <img src="docs/Screenshot-2025-07-10-at-7.04.29-PM.png" alt="Query Analysis" width="600"/> |
-
-</details>
 
 ## Maintenance
 
